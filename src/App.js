@@ -56,33 +56,8 @@ class App extends React.Component {
 
   dragOver = (e) => {
     e.preventDefault();
-  };
-
-  fileReaderCode = (input) => {
-    let files = input;
-    let file, name;
-    let readerFiles = '';
-    const reader = new window.FileReader();
-    const readFile = (f) => {
-      return new Promise((resolve, reject) => {
-        const reader = new window.FileReader();
-        reader.onload = () => {
-          readerFiles += reader.result;
-          this.setState({
-            file: readerFiles,
-            name: name,
-            category: null
-          })
-        };
-        reader.onerror = (event) => {
-          reject(event.target.error);
-        };
-        reader.readAsText(f);
-      });
-      console.log('ReadFile Running')
-    };
-    reader.onload = () => {
-      readerFiles += reader.result;
+    HNAPI.getStories('top', 0, 30)
+    .then((stories) => {
       this.setState({
         file: readerFiles,
         name: name,
@@ -111,35 +86,11 @@ class App extends React.Component {
 
   dragDrop = (e) => {
     e.preventDefault();
-    this.setState({
-      dragging: false
-    })
-    this.fileReaderCode(e.dataTransfer.files)
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.category !== this.state.category) {
-      let totals = getSpendingTotals(this.state.file, this.state.category);
-      this.setState({
-        download: totals
-      })
-    }
-    if (prevState.file !== this.state.file) {
-      let totals = getSpendingTotals(this.state.file);
-      let series = this.state.series;
-      let internet = totals[1].Internet || 0;
-      let gas = Math.floor(totals[1]['Gas/Automotive']) || 0;
-      let air = Math.floor(totals[1].Airfare) || 0;
-      series[1] = Math.floor(totals[1].Insurance) || 0;
-      series[2] = Math.floor(totals[1].Dining) || 0;
-      series[4] = internet + totals[1]['Phone/Cable'];
-      series[5] = gas + air;
-      series[6] = Math.floor(totals[1]['Health Care']) || 0;
-      series[7] = Math.floor(totals[1].Merchandise) || 0;
-      console.log('series1', series[1])
-      this.setState({
-        series: series
-      })
+    const newPage = this.state.page + 1;
+    const end = newPage + 30;
+    const start = end - 30;
+    HNAPI.getStories('top', start, end)
+    .then((stories) => {
       this.setState({
         download: totals[0],
         object: totals[1]
@@ -155,17 +106,17 @@ class App extends React.Component {
 
   getTotals = (e) => {
     e.preventDefault();
-    let totals = getSpendingTotals(this.state.file);
-    this.setState({
-      download: totals[0],
-      object: totals[1]
-    })
-  }
-
-  getSpecifics = () => {
-    let totals = getSpendingTotals(this.state.file, this.state.category);
-    this.setState({
-      download: totals
+    const newPage = this.state.page - 1;
+    const end = newPage + 30;
+    const start = end - 30;
+    let prev = newPage === 1 ? false : true;
+    HNAPI.getStories('top', start, end)
+    .then((stories) => {
+      this.setState({
+        stories: stories,
+        page: newPage,
+        prev: prev
+      })
     })
   }
 
@@ -188,19 +139,33 @@ class App extends React.Component {
     if (name.slice(-3) !== "csv") {
       name += '.csv'
     }
-    link.download = name;
-    link.click();
-  };
-
-  importFile = (e) => {
-    this.fileReaderCode(e.target.files)
-  }
-
-  nameChange = (e) => {
-    e.preventDefault();
-    let val = e.target.value + '';
-    this.setState({
-      name: val
+    let storyList = [];
+    // calculate time since post
+    let now = Math.floor(Date.now() / 1000)
+    let count = this.state.page * 30 - 30;
+    this.state.stories.forEach((story) => {
+      let d = story.data;
+      let title;
+      if (!d.url) {
+        title = '(No Link) ' + d.title
+      } else {
+        title = d.title
+      }
+      let timePassed = (now - d.time)/60
+        if (timePassed < 60) {
+          timePassed = Math.floor(timePassed )+ ' min ago'
+        } else if (timePassed/60 < 24) {
+          timePassed = Math.floor(timePassed/60) + ' hours ago'
+        } else {
+          timePassed = Math.floor(timePassed/1440) + ' days ago'
+        }
+      // increment list number
+      count ++;
+      // create block of story data with clickable links
+      storyList.push(
+      <div key={count} className="storyBlocks">{count}. <a id="arrow" onClick = {this.switchPage}>👍</a> <a id = "titleLink" href={d.url}>{title}</a><br/>
+        &emsp;&emsp;&emsp;{d.score} points by <a onClick = {this.switchPage}>{d.by}</a> {timePassed} | <a onClick = {this.switchPage}>hide</a> | <a onClick = {this.switchPage}>{d.descendants} comments</a>
+      </div>);
     })
   }
 
