@@ -1,43 +1,50 @@
-import React, { useState } from "react";
-import { FileReader } from "react";
-import { CsvToHtmlTable } from "react-csv-to-table";
-import { getSpendingTotals, fineGrainedBreakdown } from './breakdownFns.js';
-import Donut from "./donut.js";
-import MyDonut from "./myDonut.js"
-
+const React = require("react");
+const axios = require('axios');
+const HNAPI = require('./fetcher.js');
+const React = require("react");
+const axios = require('axios');
+const HNAPI = require('./fetcher.js');
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      file: null,
-      name: null,
-      download: null,
-      object: {},
-      category: null,
-      categories: null,
-      dragging: false,
-      show: 'block',
-      series: [1,2,3,4,5,6,7,8]
+      stories: [],
+      page: 1,
+      underConstruction: false,
+      prev: false
+      stories: [],
+      page: 1,
+      underConstruction: false,
+      prev: false
     }
   }
 
-
-  addCategory = (e) => {
-    e.preventDefault();
-    let val = e.target.value
-    console.log('val here', val)
-    if (Object.keys(this.state.object).includes(val)) {
-      this.setState({
-        category: val,
-        show: 'block'
-    })
-    } else {
-      let totals = getSpendingTotals(this.state.file);
+  // Get first 30 stories on page load
+  componentDidMount() {
+    HNAPI.getStories('top')
+    .then((stories) => {
+  // Get first 30 stories on page load
+  componentDidMount() {
+    HNAPI.getStories('top')
+    .then((stories) => {
       this.setState({
         download: totals[0]
       })
-    }
+    })
+  }
+
+  // function to quickly make clickable links to "under construction" page
+  makeLink = (word) => {
+    return <a onClick = {this.switchPage}>{word}</a>
+        stories: stories
+      })
+    })
+  }
+
+  // function to quickly make clickable links to "under construction" page
+  makeLink = (word) => {
+    return <a onClick = {this.switchPage}>{word}</a>
   }
 
   dragEnter = (e) => {
@@ -84,7 +91,10 @@ class App extends React.Component {
     }
   }
 
-  dragDrop = (e) => {
+  // makes API call to get next 30 stories
+  nextPage = (e) => {
+  // makes API call to get next 30 stories
+  nextPage = (e) => {
     e.preventDefault();
     const newPage = this.state.page + 1;
     const end = newPage + 30;
